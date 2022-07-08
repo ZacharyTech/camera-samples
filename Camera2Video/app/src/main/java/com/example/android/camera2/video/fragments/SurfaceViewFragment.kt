@@ -33,10 +33,7 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaScannerConnection
-import android.os.Bundle
-import android.os.ConditionVariable
-import android.os.Handler
-import android.os.HandlerThread
+import android.os.*
 import android.util.Log
 import android.util.Range
 import android.view.LayoutInflater
@@ -56,14 +53,7 @@ import androidx.navigation.Navigation
 import androidx.navigation.fragment.navArgs
 import com.example.android.camera.utils.OrientationLiveData
 import com.example.android.camera.utils.getPreviewOutputSize
-import com.example.android.camera2.video.BuildConfig
 import com.example.android.camera2.video.CameraActivity
-import com.example.android.camera2.video.R
-import com.example.android.camera2.video.databinding.FragmentSurfaceViewBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -74,6 +64,11 @@ import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 import com.example.android.camera2.video.EncoderWrapper
+import kotlinx.coroutines.*
+import vdo.android.BuildConfig
+import vdo.android.R
+import vdo.android.databinding.FragmentSurfaceViewBinding
+import java.lang.Runnable
 
 class SurfaceViewFragment : Fragment() {
 
@@ -288,10 +283,9 @@ class SurfaceViewFragment : Fragment() {
         session.setRepeatingRequest(previewRequest, null, cameraHandler)
 
         // React to user touching the capture button
-        fragmentBinding.captureButton.setOnTouchListener { view, event ->
-            when (event.action) {
-
-                MotionEvent.ACTION_DOWN -> lifecycleScope.launch(Dispatchers.IO) {
+        fragmentBinding.captureButton.setOnClickListener{ view ->
+            when (view.isSelected) {
+                false -> lifecycleScope.launch(Dispatchers.IO) {
 
                     // Prevents screen rotation during the video recording
                     requireActivity().requestedOrientation =
@@ -319,10 +313,13 @@ class SurfaceViewFragment : Fragment() {
                     Log.d(TAG, "Recording started")
 
                     // Starts recording animation
-                    fragmentBinding.overlay.post(animationTask)
+                    // fragmentBinding.overlay.post(animationTask)
+                    withContext(Dispatchers.Main) {
+                        view.isSelected = true
+                    }
                 }
 
-                MotionEvent.ACTION_UP -> lifecycleScope.launch(Dispatchers.IO) {
+                true -> lifecycleScope.launch(Dispatchers.IO) {
                     /* Wait for at least one frame to process so we don't have an empty video */
                     encoder.waitForFirstFrame()
 
@@ -348,6 +345,10 @@ class SurfaceViewFragment : Fragment() {
                     Log.d(TAG, "Recording stopped. Output file: $outputFile")
                     encoder.shutdown()
 
+                    withContext(Dispatchers.Main) {
+                        view.isSelected = false
+                    }
+
                     // Broadcasts the media file to the rest of the system
                     MediaScannerConnection.scanFile(
                             requireView().context, arrayOf(outputFile.absolutePath), null, null)
@@ -356,7 +357,7 @@ class SurfaceViewFragment : Fragment() {
                     startActivity(Intent().apply {
                         action = Intent.ACTION_VIEW
                         type = MimeTypeMap.getSingleton()
-                                .getMimeTypeFromExtension(outputFile.extension)
+                            .getMimeTypeFromExtension(outputFile.extension)
                         val authority = "${BuildConfig.APPLICATION_ID}.provider"
                         data = FileProvider.getUriForFile(view.context, authority, outputFile)
                         flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
@@ -366,8 +367,6 @@ class SurfaceViewFragment : Fragment() {
                     navController.popBackStack()
                 }
             }
-
-            true
         }
     }
 
@@ -488,8 +487,14 @@ class SurfaceViewFragment : Fragment() {
 
         /** Creates a [File] named with the current date and time */
         private fun createFile(context: Context, extension: String): File {
+            // val root = context.filesDir
+            val root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
+            val atest = File(root, "1vdo")
+            if (!atest.isDirectory) {
+                atest.mkdirs()
+            }
             val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.US)
-            return File(context.filesDir, "VID_${sdf.format(Date())}.$extension")
+            return File(atest, "VID_${sdf.format(Date())}.$extension")
         }
     }
 }

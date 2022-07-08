@@ -34,7 +34,7 @@ import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.android.camera.utils.GenericListAdapter
-import com.example.android.camera2.video.R
+import vdo.android.R
 
 /**
  * In this [Fragment] we let users pick a camera, size and FPS to use for high
@@ -74,6 +74,7 @@ class SelectorFragment : Fragment() {
                         val characteristics = cameraManager.getCameraCharacteristics(item.cameraId)
                         dynamicRangeProfiles = characteristics.get(
                                 CameraCharacteristics.REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES)
+                        //Log.d(TAG, dynamicRangeProfiles?.let { "NULL" } ?: dynamicRangeProfiles!!.supportedProfiles.toTypedArray().contentDeepToString())
                         val previewStabilizationModes = characteristics.get(
                                 CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)!!
                         supportsPreviewStabilization = previewStabilizationModes.contains(
@@ -137,7 +138,9 @@ class SelectorFragment : Fragment() {
             //  constrained high speed video recording, but some cameras may be capable of doing
             //  unconstrained video recording with high enough FPS for some use cases and they will
             //  not necessarily declare constrained high speed video capability.
-            cameraManager.cameraIdList.forEach { id ->
+            cameraManager.cameraIdList
+                .filter { id -> id !=  CameraCharacteristics.LENS_FACING_BACK.toString()}
+                .forEach { id ->
                 val characteristics = cameraManager.getCameraCharacteristics(id)
                 val orientation = lensOrientationString(
                         characteristics.get(CameraCharacteristics.LENS_FACING)!!)
@@ -156,21 +159,30 @@ class SelectorFragment : Fragment() {
                     val targetClass = MediaRecorder::class.java
 
                     // For each size, list the expected FPS
-                    cameraConfig.getOutputSizes(targetClass).forEach { size ->
-                        // Get the number of seconds that each frame will take to process
-                        val secondsPerFrame =
-                                cameraConfig.getOutputMinFrameDuration(targetClass, size) /
-                                        1_000_000_000.0
-                        // Compute the frames per second to let user select a configuration
-                        val fps = if (secondsPerFrame > 0) (1.0 / secondsPerFrame).toInt() else 0
-                        val fpsLabel = if (fps > 0) "$fps" else "N/A"
-                        availableCameras.add(CameraInfo(
-                                "$orientation ($id) $size $fpsLabel FPS", id, size, fps))
-                    }
+                    cameraConfig.getOutputSizes(targetClass)
+                        .filter { size -> size.is1080P() }
+                        .forEach { size ->
+                            // Get the number of seconds that each frame will take to process
+                            val secondsPerFrame = cameraConfig.getOutputMinFrameDuration(
+                                targetClass,
+                                size
+                            ) / 1_000_000_000.0
+                            // Compute the frames per second to let user select a configuration
+                            // val fps = if (secondsPerFrame > 0) (1.0 / secondsPerFrame).toInt() else 0
+                             val fps = 30
+                            val fpsLabel = if (fps > 0) "$fps" else "N/A"
+                            val label = "$orientation ($id) $size $fpsLabel FPS"
+                            availableCameras.add(CameraInfo(label, id, size, fps))
+                        }
                 }
             }
 
             return availableCameras
         }
     }
+}
+
+
+fun Size.is1080P(): Boolean {
+    return width == 1920 && height == 1080
 }

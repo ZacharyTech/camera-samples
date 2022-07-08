@@ -33,7 +33,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.android.camera.utils.GenericListAdapter
-import com.example.android.camera2.video.R
+import vdo.android.R
 
 /**
  * In this [Fragment] we let users pick how recording is processed (via two separate camera streams

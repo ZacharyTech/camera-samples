@@ -20,79 +20,39 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.graphics.Color
-import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.SurfaceTexture
-import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.*
 import android.hardware.camera2.params.OutputConfiguration
-import android.hardware.HardwareBuffer
-import android.media.Image
-import android.media.ImageReader
-import android.media.ImageWriter
-import android.media.MediaCodec
-import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaScannerConnection
-import android.opengl.EGL14
-import android.opengl.EGL14.EGL_CONTEXT_CLIENT_VERSION
-import android.opengl.EGL14.EGL_OPENGL_ES2_BIT
-import android.opengl.EGLConfig
-import android.opengl.EGLContext
-import android.opengl.EGLDisplay
-import android.opengl.EGLExt
-import android.opengl.EGLSurface
-import android.opengl.GLES11Ext
-import android.opengl.GLES20
-import android.os.Bundle
-import android.os.ConditionVariable
-import android.os.Handler
-import android.os.HandlerThread
+import android.opengl.*
+import android.os.*
 import android.util.Log
-import android.util.Range
 import android.util.Size
-import android.view.LayoutInflater
-import android.view.MotionEvent
-import android.view.Surface
-import android.view.SurfaceHolder
-import android.view.TextureView
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
-import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.Navigation
 import androidx.navigation.fragment.navArgs
-import com.example.android.camera.utils.getPreviewOutputSize
-import com.example.android.camera2.video.BuildConfig
 import com.example.android.camera2.video.CameraActivity
-import com.example.android.camera2.video.R
-import com.example.android.camera2.video.databinding.FragmentTextureViewBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
+import com.example.android.camera2.video.EncoderWrapper
+import kotlinx.coroutines.*
+import vdo.android.BuildConfig
+import vdo.android.R
+import vdo.android.databinding.FragmentTextureViewBinding
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.IntBuffer
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlin.RuntimeException
+import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-
-import com.example.android.camera2.video.EncoderWrapper
 
 /** Generates a fullscreen quad to cover the entire viewport. Applies the transform set on the
     camera surface to adjust for orientation and scaling when used for copying from the camera
@@ -193,27 +153,6 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
     /** [Handler] corresponding to [cameraThread] */
     private val cameraHandler = Handler(cameraThread.looper)
 
-    /** Performs recording animation of flashing screen */
-    private val animationTask: Runnable by lazy {
-        Runnable {
-            // Flash white animation
-            fragmentBinding.overlay.foreground = Color.argb(150, 255, 255, 255).toDrawable()
-            // Wait for ANIMATION_FAST_MILLIS
-
-            if (currentlyRecording) {
-                fragmentBinding.overlay.postDelayed({
-                    // Remove white flash animation
-                    fragmentBinding.overlay.foreground = null
-                    // Restart animation recursively
-                    if (currentlyRecording) {
-                        fragmentBinding.overlay.postDelayed(animationTask,
-                                CameraActivity.ANIMATION_FAST_MILLIS)
-                    }
-                }, CameraActivity.ANIMATION_FAST_MILLIS)
-            }
-        }
-    }
-
     /** Captures frames from a [CameraDevice] for our video recording */
     private lateinit var session: CameraCaptureSession
 
@@ -264,10 +203,11 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
         session.device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
             // Add the preview surface target
             addTarget(cameraSurface)
+            set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
 
             if (args.previewStabilization) {
-                set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
-                        CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION)
+//                set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
+//                        CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION)
             }
         }.build()
     }
@@ -544,10 +484,10 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
         session.setRepeatingRequest(captureRequest, null, cameraHandler)
 
         // React to user touching the capture button
-        fragmentBinding.captureButton.setOnTouchListener { view, event ->
-            when (event.action) {
+        fragmentBinding.captureButton.setOnClickListener{ view ->
+            when (view.isSelected) {
+                false -> lifecycleScope.launch(Dispatchers.IO) {
 
-                MotionEvent.ACTION_DOWN -> lifecycleScope.launch(Dispatchers.IO) {
                     // Prevents screen rotation during the video recording
                     requireActivity().requestedOrientation =
                             ActivityInfo.SCREEN_ORIENTATION_LOCKED
@@ -565,13 +505,16 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
                     currentlyRecording = true
 
                     recordingStartMillis = System.currentTimeMillis()
-                    Log.v(TAG, "Recording started")
+                    Log.d(TAG, "Recording started")
 
                     // Starts recording animation
-                    fragmentBinding.overlay.post(animationTask)
+                    // fragmentBinding.overlay.post(animationTask)
+                    withContext(Dispatchers.Main) {
+                        view.isSelected = true
+                    }
                 }
 
-                MotionEvent.ACTION_UP -> lifecycleScope.launch(Dispatchers.IO) {
+                true -> lifecycleScope.launch(Dispatchers.IO) {
                     /* Wait for at least one frame to process so we don't have an empty video */
                     encoder.waitForFirstFrame()
 
@@ -605,6 +548,10 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
 
                     Log.v(TAG, "Recording stopped. Output file: $outputFile")
                     encoder.shutdown()
+
+                    withContext(Dispatchers.Main) {
+                        view.isSelected = false
+                    }
 
                     // Broadcasts the media file to the rest of the system
                     MediaScannerConnection.scanFile(
@@ -863,9 +810,16 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
         private const val MIN_REQUIRED_RECORDING_TIME_MILLIS: Long = 1000L
 
         /** Creates a [File] named with the current date and time */
+        /** Creates a [File] named with the current date and time */
         private fun createFile(context: Context, extension: String): File {
+            // val root = context.filesDir
+            val root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
+            val atest = File(root, "1vdo")
+            if (!atest.isDirectory) {
+                atest.mkdirs()
+            }
             val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.US)
-            return File(context.filesDir, "VID_${sdf.format(Date())}.$extension")
+            return File(atest, "VID_${sdf.format(Date())}.$extension")
         }
 
         /** Check if OpenGL failed, and throw an exception if so */
