@@ -618,21 +618,8 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
             handler: Handler? = null,
             stateCallback: CameraCaptureSession.StateCallback
     ): Boolean {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            val outputConfigs = mutableListOf<OutputConfiguration>()
-            for (target in targets) {
-                val outputConfig = OutputConfiguration(target)
-                outputConfig.setTimestampBase(OutputConfiguration.TIMESTAMP_BASE_MONOTONIC)
-                outputConfigs.add(outputConfig)
-            }
-
-            device.createCaptureSessionByOutputConfigurations(
-                    outputConfigs, stateCallback, handler)
-            return true
-        } else {
-            device.createCaptureSession(targets, stateCallback, handler)
-            return false
-        }
+        device.createCaptureSession(targets, stateCallback, handler)
+        return false
     }
 
     /**

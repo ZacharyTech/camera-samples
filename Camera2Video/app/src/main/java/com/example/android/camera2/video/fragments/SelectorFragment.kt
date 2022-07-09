@@ -21,9 +21,9 @@ import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
-import android.hardware.camera2.params.DynamicRangeProfiles
 import android.media.MediaRecorder
 import android.os.Bundle
+import android.util.Log
 import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
@@ -34,6 +34,8 @@ import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.android.camera.utils.GenericListAdapter
+import com.example.android.camera2.video.C
+import com.example.android.camera2.video.C.TAG
 import vdo.android.R
 
 /**
@@ -59,44 +61,17 @@ class SelectorFragment : Fragment() {
                     requireContext().getSystemService(Context.CAMERA_SERVICE) as CameraManager
 
             val cameraList = enumerateVideoCameras(cameraManager)
+            enumerateVideoFps(cameraManager)
 
             val layoutId = android.R.layout.simple_list_item_1
             adapter = GenericListAdapter(cameraList, itemLayoutId = layoutId) { view, item, _ ->
                 view.findViewById<TextView>(android.R.id.text1).text = item.name
                 view.setOnClickListener {
-                    var dynamicRangeProfiles: DynamicRangeProfiles? = null
-                    var supportsPreviewStabilization = false
-
-                    // DynamicRangeProfiles is introduced in android Tiramisu. If the SDK residing on
-                    // our device is older, do not call the non-existant paths.
-                    if (android.os.Build.VERSION.SDK_INT >=
-                            android.os.Build.VERSION_CODES.TIRAMISU) {
-                        val characteristics = cameraManager.getCameraCharacteristics(item.cameraId)
-                        dynamicRangeProfiles = characteristics.get(
-                                CameraCharacteristics.REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES)
-                        //Log.d(TAG, dynamicRangeProfiles?.let { "NULL" } ?: dynamicRangeProfiles!!.supportedProfiles.toTypedArray().contentDeepToString())
-                        val previewStabilizationModes = characteristics.get(
-                                CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)!!
-                        supportsPreviewStabilization = previewStabilizationModes.contains(
-                                CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION)
-                    }
 
                     val navController =
                         Navigation.findNavController(requireActivity(), R.id.fragment_container)
 
-                    // If possible, navigate to a second selector for picking a dynamic range.
-                    // Otherwise continue on to video recording.
-                    if (dynamicRangeProfiles != null) {
-                        navController.navigate(
-                            SelectorFragmentDirections.actionSelectorToDynamicRange(
-                            item.cameraId, item.size.width, item.size.height, item.fps))
-                    } else if (supportsPreviewStabilization) {
-                        navController.navigate(
-                            SelectorFragmentDirections.actionSelectorToPreviewStabilization(
-                            item.cameraId, item.size.width, item.size.height, item.fps,
-                            DynamicRangeProfiles.STANDARD)
-                        )
-                    } else if (android.os.Build.VERSION.SDK_INT >= 29) {
+                    if (android.os.Build.VERSION.SDK_INT >= 29) {
                         navController.navigate(
                             SelectorFragmentDirections.actionSelectorToRecordMode(
                             item.cameraId, item.size.width, item.size.height, item.fps,
@@ -168,17 +143,26 @@ class SelectorFragment : Fragment() {
                                 size
                             ) / 1_000_000_000.0
                             // Compute the frames per second to let user select a configuration
-                            // val fps = if (secondsPerFrame > 0) (1.0 / secondsPerFrame).toInt() else 0
-                             val fps = 30
+                            val fps = if (secondsPerFrame > 0) (1.0 / secondsPerFrame).toInt() else 0
+                            // val fps = 30
                             val fpsLabel = if (fps > 0) "$fps" else "N/A"
                             val label = "$orientation ($id) $size $fpsLabel FPS"
                             availableCameras.add(CameraInfo(label, id, size, fps))
                         }
                 }
             }
-
             return availableCameras
         }
+
+
+        private fun enumerateVideoFps(cameraManager: CameraManager) {
+            cameraManager.cameraIdList.forEach { id ->
+                val characteristics = cameraManager.getCameraCharacteristics(id)
+                val fpsRange = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+                Log.d(C.TAG, "enumerateVideoFps: ${fpsRange.contentToString()}")
+            }
+        }
+
     }
 }
 

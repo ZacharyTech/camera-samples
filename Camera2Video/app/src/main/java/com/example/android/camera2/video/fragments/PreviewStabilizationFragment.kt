@@ -17,10 +17,7 @@
 package com.example.android.camera2.video.fragments
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.hardware.camera2.params.DynamicRangeProfiles
 import android.os.Bundle
-import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

@@ -21,7 +21,6 @@ import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
-import android.hardware.camera2.params.DynamicRangeProfiles
 import android.os.Bundle
 import android.util.Size
 import android.view.LayoutInflater
@@ -96,8 +95,7 @@ class DynamicRangeFragment : Fragment() {
         val characteristics = cameraManager.getCameraCharacteristics(args.cameraId)
         val previewStabilizationModes = characteristics.get(
             CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES)!!
-        return previewStabilizationModes.contains(
-                CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION)
+        return false
     }
 
     companion object {
@@ -107,18 +105,18 @@ class DynamicRangeFragment : Fragment() {
                 val value: Long)
 
         private fun dynamicRangeProfileString(value: Long) = when (value) {
-            DynamicRangeProfiles.STANDARD -> "STANDARD"
-            DynamicRangeProfiles.HLG10 -> "HLG10"
-            DynamicRangeProfiles.HDR10 -> "HDR10"
-            DynamicRangeProfiles.HDR10_PLUS -> "HDR10_PLUS"
-            DynamicRangeProfiles.DOLBY_VISION_10B_HDR_REF -> "DOLBY_VISION_10B_HDR_REF"
-            DynamicRangeProfiles.DOLBY_VISION_10B_HDR_REF_PO -> "DOLBY_VISION_10B_HDR_REF_PO"
-            DynamicRangeProfiles.DOLBY_VISION_10B_HDR_OEM -> "DOLBY_VISION_10B_HDR_OEM"
-            DynamicRangeProfiles.DOLBY_VISION_10B_HDR_OEM_PO -> "DOLBY_VISION_10B_HDR_OEM_PO"
-            DynamicRangeProfiles.DOLBY_VISION_8B_HDR_REF -> "DOLBY_VISION_8B_HDR_REF"
-            DynamicRangeProfiles.DOLBY_VISION_8B_HDR_REF_PO -> "DOLBY_VISION_8B_HDR_REF_PO"
-            DynamicRangeProfiles.DOLBY_VISION_8B_HDR_OEM -> "DOLBY_VISION_8B_HDR_OEM"
-            DynamicRangeProfiles.DOLBY_VISION_8B_HDR_OEM_PO -> "DOLBY_VISION_8B_HDR_OEM_PO"
+//            DynamicRangeProfiles.STANDARD -> "STANDARD"
+//            DynamicRangeProfiles.HLG10 -> "HLG10"
+//            DynamicRangeProfiles.HDR10 -> "HDR10"
+//            DynamicRangeProfiles.HDR10_PLUS -> "HDR10_PLUS"
+//            DynamicRangeProfiles.DOLBY_VISION_10B_HDR_REF -> "DOLBY_VISION_10B_HDR_REF"
+//            DynamicRangeProfiles.DOLBY_VISION_10B_HDR_REF_PO -> "DOLBY_VISION_10B_HDR_REF_PO"
+//            DynamicRangeProfiles.DOLBY_VISION_10B_HDR_OEM -> "DOLBY_VISION_10B_HDR_OEM"
+//            DynamicRangeProfiles.DOLBY_VISION_10B_HDR_OEM_PO -> "DOLBY_VISION_10B_HDR_OEM_PO"
+//            DynamicRangeProfiles.DOLBY_VISION_8B_HDR_REF -> "DOLBY_VISION_8B_HDR_REF"
+//            DynamicRangeProfiles.DOLBY_VISION_8B_HDR_REF_PO -> "DOLBY_VISION_8B_HDR_REF_PO"
+//            DynamicRangeProfiles.DOLBY_VISION_8B_HDR_OEM -> "DOLBY_VISION_8B_HDR_OEM"
+//            DynamicRangeProfiles.DOLBY_VISION_8B_HDR_OEM_PO -> "DOLBY_VISION_8B_HDR_OEM_PO"
             else -> "UNKNOWN"
         }
 
@@ -127,13 +125,13 @@ class DynamicRangeFragment : Fragment() {
                                                   cameraId: String): List<DynamicRangeInfo> {
             val dynamicRangeList: MutableList<DynamicRangeInfo> = mutableListOf()
 
-            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-            val dynamicRangeProfiles = characteristics.get(
-                    CameraCharacteristics.REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES)!!
-            dynamicRangeProfiles.getSupportedProfiles().forEach { profile ->
-                val profileName = dynamicRangeProfileString(profile)
-                dynamicRangeList.add(DynamicRangeInfo(profileName, profile))
-            }
+//            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+//            val dynamicRangeProfiles = characteristics.get(
+//                    CameraCharacteristics.REQUEST_AVAILABLE_DYNAMIC_RANGE_PROFILES)!!
+//            dynamicRangeProfiles.getSupportedProfiles().forEach { profile ->
+//                val profileName = dynamicRangeProfileString(profile)
+//                dynamicRangeList.add(DynamicRangeInfo(profileName, profile))
+//            }
 
             return dynamicRangeList
         }

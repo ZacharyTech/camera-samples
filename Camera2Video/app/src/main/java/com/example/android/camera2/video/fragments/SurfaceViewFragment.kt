@@ -21,14 +21,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
-import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CaptureRequest
-import android.hardware.camera2.TotalCaptureResult
-import android.hardware.camera2.params.DynamicRangeProfiles
-import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.*
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
@@ -147,11 +140,14 @@ class SurfaceViewFragment : Fragment() {
         session.device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
             // Add the preview surface target
             addTarget(fragmentBinding.viewFinder.holder.surface)
+            // Sets user requested FPS for all targets
+            // set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, Range(args.fps, args.fps))
+            set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, Range(30, 30))
 
-            if (args.previewStabilization) {
-                set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
-                        CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION)
-            }
+//            if (args.previewStabilization) {
+//                set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
+//                        CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION)
+//            }
         }.build()
     }
 
@@ -162,13 +158,10 @@ class SurfaceViewFragment : Fragment() {
             // Add the preview and recording surface targets
             addTarget(fragmentBinding.viewFinder.holder.surface)
             addTarget(encoderSurface)
+            set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
             // Sets user requested FPS for all targets
             set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, Range(args.fps, args.fps))
 
-            if (args.previewStabilization) {
-                set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
-                        CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION)
-            }
         }.build()
     }
 
@@ -240,22 +233,8 @@ class SurfaceViewFragment : Fragment() {
     }
 
     private fun createEncoder(): EncoderWrapper {
-        val videoEncoder = when {
-            args.dynamicRange == DynamicRangeProfiles.STANDARD -> MediaFormat.MIMETYPE_VIDEO_AVC
-            args.dynamicRange < DynamicRangeProfiles.PUBLIC_MAX -> MediaFormat.MIMETYPE_VIDEO_HEVC
-            else -> throw IllegalArgumentException("Unknown dynamic range format")
-        }
-
-        val codecProfile = when {
-            args.dynamicRange == DynamicRangeProfiles.HLG10 ->
-                    MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10
-            args.dynamicRange == DynamicRangeProfiles.HDR10 ->
-                    MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10
-            args.dynamicRange == DynamicRangeProfiles.HDR10_PLUS ->
-                    MediaCodecInfo.CodecProfileLevel.HEVCProfileMain10HDR10Plus
-            else -> -1
-        }
-
+        val codecProfile =  -1
+        val videoEncoder = MediaFormat.MIMETYPE_VIDEO_AVC
         return EncoderWrapper(args.width, args.height, RECORDER_VIDEO_BITRATE, args.fps,
                 orientation, videoEncoder, codecProfile, outputFile)
     }
@@ -300,9 +279,62 @@ class SurfaceViewFragment : Fragment() {
                     //  repeating requests without having to explicitly call `session.stopRepeating`
                     session.setRepeatingRequest(recordRequest,
                             object : CameraCaptureSession.CaptureCallback() {
-                        override fun onCaptureCompleted(session: CameraCaptureSession,
-                                                        request: CaptureRequest,
-                                                        result: TotalCaptureResult) {
+                                override fun onCaptureStarted(
+                                    session: CameraCaptureSession,
+                                    request: CaptureRequest,
+                                    timestamp: Long,
+                                    frameNumber: Long
+                                ) {
+                                    super.onCaptureStarted(session, request, timestamp, frameNumber)
+                                    Log.d(TAG, "onCaptureStarted: ")
+                                }
+
+                                override fun onCaptureProgressed(
+                                    session: CameraCaptureSession,
+                                    request: CaptureRequest,
+                                    partialResult: CaptureResult
+                                ) {
+                                    super.onCaptureProgressed(session, request, partialResult)
+                                    Log.d(TAG, "onCaptureProgressed: ")
+                                }
+
+                                override fun onCaptureFailed(
+                                    session: CameraCaptureSession,
+                                    request: CaptureRequest,
+                                    failure: CaptureFailure
+                                ) {
+                                    super.onCaptureFailed(session, request, failure)
+                                    Log.d(TAG, "onCaptureFailed: ")
+                                }
+
+                                override fun onCaptureSequenceCompleted(
+                                    session: CameraCaptureSession,
+                                    sequenceId: Int,
+                                    frameNumber: Long
+                                ) {
+                                    Log.d(TAG, "onCaptureSequenceCompleted: ")
+                                }
+
+                                override fun onCaptureSequenceAborted(
+                                    session: CameraCaptureSession,
+                                    sequenceId: Int
+                                ) {
+                                    Log.d(TAG, "onCaptureSequenceAborted: ")
+                                }
+
+                                override fun onCaptureBufferLost(
+                                    session: CameraCaptureSession,
+                                    request: CaptureRequest,
+                                    target: Surface,
+                                    frameNumber: Long
+                                ) {
+                                    Log.e(TAG, "onCaptureBufferLost: ")
+                                }
+
+                                override fun onCaptureCompleted(session: CameraCaptureSession,
+                                                                request: CaptureRequest,
+                                                                result: TotalCaptureResult) {
+                                    Log.d(TAG, "onCaptureCompleted: ")
                             if (currentlyRecording) {
                                 encoder.frameAvailable()
                             }
@@ -410,21 +442,8 @@ class SurfaceViewFragment : Fragment() {
             handler: Handler? = null,
             stateCallback: CameraCaptureSession.StateCallback
     ): Boolean {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            val outputConfigs = mutableListOf<OutputConfiguration>()
-            for (target in targets) {
-                val outputConfig = OutputConfiguration(target)
-                outputConfig.setDynamicRangeProfile(args.dynamicRange)
-                outputConfigs.add(outputConfig)
-            }
-
-            device.createCaptureSessionByOutputConfigurations(
-                    outputConfigs, stateCallback, handler)
-            return true
-        } else {
-            device.createCaptureSession(targets, stateCallback, handler)
-            return false
-        }
+        device.createCaptureSession(targets, stateCallback, handler)
+        return false
     }
 
     /**
