@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright 2020 The Android Open Source Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,16 +13,16 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<navigation
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
     app:startDestination="@id/permissions_fragment">
 
     <fragment
         android:id="@+id/permissions_fragment"
         android:name="com.example.android.camera2.video.fragments.PermissionsFragment"
-        android:label="Permissions" >
+        android:label="Permissions">
 
         <action
             android:id="@+id/action_permissions_to_selector"
@@ -36,7 +35,7 @@
     <fragment
         android:id="@+id/selector_fragment"
         android:name="com.example.android.camera2.video.fragments.SelectorFragment"
-        android:label="Selector" >
+        android:label="Selector">
 
         <action
             android:id="@+id/action_selector_to_dynamic_range"
@@ -48,25 +47,29 @@
 
         <action
             android:id="@+id/action_selector_to_record_mode"
-            app:launchSingleTop="true"
-            app:destination="@id/record_mode_fragment" />
+            app:destination="@id/record_mode_fragment"
+            app:launchSingleTop="true" />
 
         <action
             android:id="@+id/action_selector_to_surface_view"
-            app:launchSingleTop="true"
-            app:destination="@id/surface_view_fragment" />
+            app:destination="@id/surface_view_fragment"
+            app:launchSingleTop="true" />
+
+        <action android:id="@+id/action_selector_to_audio"
+            app:destination="@id/audio_fragment"
+            app:launchSingleTop="true"/>
 
     </fragment>
 
     <fragment
         android:id="@+id/dynamic_range_fragment"
         android:name="com.example.android.camera2.video.fragments.DynamicRangeFragment"
-        android:label="DynamicRange" >
+        android:label="DynamicRange">
 
         <argument
             android:name="camera_id"
             app:argType="string"
-            app:nullable="false"/>
+            app:nullable="false" />
 
         <argument
             android:name="width"
@@ -82,30 +85,30 @@
 
         <action
             android:id="@+id/action_dynamic_range_to_preview_stabilization"
-            app:launchSingleTop="true"
-            app:destination="@id/preview_stabilization_fragment" />
+            app:destination="@id/preview_stabilization_fragment"
+            app:launchSingleTop="true" />
 
         <action
             android:id="@+id/action_dynamic_range_to_record_mode"
-            app:launchSingleTop="true"
-            app:destination="@id/record_mode_fragment" />
+            app:destination="@id/record_mode_fragment"
+            app:launchSingleTop="true" />
 
         <action
             android:id="@+id/action_dynamic_range_to_surface_view"
-            app:launchSingleTop="true"
-            app:destination="@id/surface_view_fragment" />
+            app:destination="@id/surface_view_fragment"
+            app:launchSingleTop="true" />
 
     </fragment>
 
     <fragment
         android:id="@+id/preview_stabilization_fragment"
         android:name="com.example.android.camera2.video.fragments.PreviewStabilizationFragment"
-        android:label="PreviewStabilization" >
+        android:label="PreviewStabilization">
 
         <argument
             android:name="camera_id"
             app:argType="string"
-            app:nullable="false"/>
+            app:nullable="false" />
 
         <argument
             android:name="width"
@@ -125,25 +128,25 @@
 
         <action
             android:id="@+id/action_preview_stabilization_to_record_mode"
-            app:launchSingleTop="true"
-            app:destination="@id/record_mode_fragment" />
+            app:destination="@id/record_mode_fragment"
+            app:launchSingleTop="true" />
 
         <action
             android:id="@+id/action_preview_stabilization_to_surface_view"
-            app:launchSingleTop="true"
-            app:destination="@id/surface_view_fragment" />
+            app:destination="@id/surface_view_fragment"
+            app:launchSingleTop="true" />
 
     </fragment>
 
     <fragment
         android:id="@+id/record_mode_fragment"
         android:name="com.example.android.camera2.video.fragments.RecordModeFragment"
-        android:label="RecordMode" >
+        android:label="RecordMode">
 
         <argument
             android:name="camera_id"
             app:argType="string"
-            app:nullable="false"/>
+            app:nullable="false" />
 
         <argument
             android:name="width"
@@ -167,25 +170,26 @@
 
         <action
             android:id="@+id/action_record_mode_to_surface_view"
-            app:launchSingleTop="true"
-            app:destination="@id/surface_view_fragment" />
+            app:destination="@id/surface_view_fragment"
+            app:launchSingleTop="true" />
 
         <action
             android:id="@+id/action_record_mode_to_filter"
-            app:launchSingleTop="true"
-            app:destination="@id/filter_fragment" />
+            app:destination="@id/filter_fragment"
+            app:launchSingleTop="true" />
 
     </fragment>
 
     <fragment
         android:id="@+id/surface_view_fragment"
         android:name="com.example.android.camera2.video.fragments.SurfaceViewFragment"
-        android:label="SurfaceView" >
+        android:label="SurfaceView"
+        tools:layout="@layout/fragment_surface_view">
 
         <argument
             android:name="camera_id"
             app:argType="string"
-            app:nullable="false"/>
+            app:nullable="false" />
 
         <argument
             android:name="width"
@@ -211,19 +215,19 @@
             android:id="@+id/action_surface_view_to_permissions"
             app:destination="@id/permissions_fragment"
             app:popUpTo="@id/surface_view_fragment"
-            app:popUpToInclusive="true"/>
+            app:popUpToInclusive="true" />
 
     </fragment>
 
     <fragment
         android:id="@+id/filter_fragment"
         android:name="com.example.android.camera2.video.fragments.FilterFragment"
-        android:label="Filter" >
+        android:label="Filter">
 
         <argument
             android:name="camera_id"
             app:argType="string"
-            app:nullable="false"/>
+            app:nullable="false" />
 
         <argument
             android:name="width"
@@ -247,20 +251,21 @@
 
         <action
             android:id="@+id/action_filter_to_texture_view"
-            app:launchSingleTop="true"
-            app:destination="@id/texture_view_fragment" />
+            app:destination="@id/texture_view_fragment"
+            app:launchSingleTop="true" />
 
     </fragment>
 
     <fragment
         android:id="@+id/texture_view_fragment"
         android:name="com.example.android.camera2.video.fragments.TextureViewFragment"
-        android:label="TextureView" >
+        android:label="TextureView"
+        tools:layout="@layout/fragment_texture_view">
 
         <argument
             android:name="camera_id"
             app:argType="string"
-            app:nullable="false"/>
+            app:nullable="false" />
 
         <argument
             android:name="width"
@@ -286,6 +291,20 @@
             android:id="@+id/action_texture_view_to_permissions"
             app:destination="@id/permissions_fragment"
             app:popUpTo="@id/texture_view_fragment"
+            app:popUpToInclusive="true" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/audio_fragment"
+        android:name="com.example.android.camera2.video.fragments.AudioFragment"
+        android:label="Audio"
+        tools:layout="@layout/fragment_audio_view">
+
+        <action
+            android:id="@+id/action_audio_to_permissions"
+            app:destination="@id/permissions_fragment"
+            app:popUpTo="@id/audio_fragment"
             app:popUpToInclusive="true" />
 
     </fragment>

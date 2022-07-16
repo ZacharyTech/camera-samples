@@ -16,6 +16,7 @@
 
 package com.example.android.camera2.video
 
+import android.media.AudioFormat
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity

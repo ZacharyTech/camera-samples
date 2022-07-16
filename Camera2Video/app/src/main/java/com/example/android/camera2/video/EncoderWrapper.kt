@@ -48,7 +48,7 @@ class EncoderWrapper(width: Int,
         val IFRAME_INTERVAL = 1 // sync one frame every second
     }
 
-    private val mOrientationHint = orientationHint
+    private val mOrientationHint = /*orientationHint*/0
 
     private val mEncoderThread: EncoderThread by lazy {
         EncoderThread(mEncoder, outputFile, mOrientationHint)
@@ -60,6 +60,10 @@ class EncoderWrapper(width: Int,
 
     private val mEncoder: MediaCodec by lazy {
         MediaCodec.createEncoderByType(mimeType)
+    }
+
+    private val mAudio: AudioCapture by lazy {
+        AudioCapture()
     }
 
     /**
@@ -77,10 +81,10 @@ class EncoderWrapper(width: Int,
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL)
 
         if (codecProfile != -1) {
-            format.setInteger(MediaFormat.KEY_PROFILE, codecProfile)
-            format.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020)
-            format.setInteger(MediaFormat.KEY_COLOR_RANGE, MediaFormat.COLOR_RANGE_LIMITED)
-            format.setInteger(MediaFormat.KEY_COLOR_TRANSFER, getTransferFunction(codecProfile))
+//            format.setInteger(MediaFormat.KEY_PROFILE, codecProfile)
+//            format.setInteger(MediaFormat.KEY_COLOR_STANDARD, MediaFormat.COLOR_STANDARD_BT2020)
+//            format.setInteger(MediaFormat.KEY_COLOR_RANGE, MediaFormat.COLOR_RANGE_LIMITED)
+//            format.setInteger(MediaFormat.KEY_COLOR_TRANSFER, getTransferFunction(codecProfile))
         }
 
         if (VERBOSE) Log.d(TAG, "format: " + format)
@@ -108,6 +112,9 @@ class EncoderWrapper(width: Int,
 
     public fun start() {
         mEncoder.start()
+        if (!mute()) {
+            mAudio.start(mEncoderThread)
+        }
 
         // Start the encoder thread last.  That way we're sure it can see all of the state
         // we've initialized.
@@ -130,7 +137,9 @@ class EncoderWrapper(width: Int,
         } catch (ie: InterruptedException ) {
             Log.w(TAG, "Encoder thread join() was interrupted", ie)
         }
-
+        if (!mute()) {
+            mAudio.stop()
+        }
         mEncoder.stop()
         mEncoder.release()
     }
@@ -165,13 +174,14 @@ class EncoderWrapper(width: Int,
      */
     private class EncoderThread(mediaCodec: MediaCodec,
                                 outputFile: File,
-                                orientationHint: Int): Thread() {
+                                orientationHint: Int): Thread(), AudioCapture.Callback {
         val mEncoder = mediaCodec
         var mEncodedFormat: MediaFormat? = null
         val mBufferInfo = MediaCodec.BufferInfo()
         val mMuxer = MediaMuxer(outputFile.getPath(), MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         val mOrientationHint = orientationHint
         var mVideoTrack: Int = -1
+        var mAudioTrack: Int = -1
 
         var mHandler: EncoderHandler? = null
         var mFrameNum: Int = 0
@@ -294,12 +304,14 @@ class EncoderWrapper(width: Int,
                         if (mVideoTrack == -1) {
                             mVideoTrack = mMuxer.addTrack(mEncodedFormat!!)
                             mMuxer.setOrientationHint(mOrientationHint)
-                            mMuxer.start()
+                            startMuxer()
                         }
 
-                        // mEncBuffer.add(encodedData, mBufferInfo.flags,
-                        //         mBufferInfo.presentationTimeUs)
-                        mMuxer.writeSampleData(mVideoTrack, encodedData, mBufferInfo)
+                        if (canWrite()) {
+                            // mEncBuffer.add(encodedData, mBufferInfo.flags,
+                            //         mBufferInfo.presentationTimeUs)
+                            mMuxer.writeSampleData(mVideoTrack, encodedData, mBufferInfo)
+                        }
 
                         if (VERBOSE) {
                             Log.d(TAG, "sent " + mBufferInfo.size + " bytes to muxer, ts=" +
@@ -337,6 +349,7 @@ class EncoderWrapper(width: Int,
         fun shutdown() {
             if (VERBOSE) Log.d(TAG, "shutdown")
             Looper.myLooper()!!.quit()
+            canWrite = false
             mMuxer.stop()
             mMuxer.release()
         }
@@ -377,5 +390,49 @@ class EncoderWrapper(width: Int,
                 }
             }
         }
+
+        override fun onFormatChanged(format: MediaFormat) {
+            if (mAudioTrack == -1 && !mute()) {
+                mAudioTrack = mMuxer.addTrack(format)
+                startMuxer()
+            }
+        }
+
+        override fun onOutputBufferAvailable(buffer: ByteBuffer, info: MediaCodec.BufferInfo) {
+            if (canWrite()) {
+                mMuxer.writeSampleData(mAudioTrack, buffer, info)
+            }
+        }
+
+        override fun onError(e: MediaCodec.CodecException) {
+            mAudioTrack = -1
+            Log.d(TAG, "Audio Capture onError: $e")
+        }
+
+        private var canWrite: Boolean = false
+
+        private fun startMuxer() {
+            if (mute()) {
+                if (mAudioTrack == -1 && mVideoTrack != -1 ) {
+                    mMuxer.start()
+                    Log.d(TAG, "startMuxer: ")
+                    canWrite = true
+                }
+            } else {
+                if (mAudioTrack != -1 && mVideoTrack != -1) {
+                    Log.d(TAG, "startMuxer: ")
+                    mMuxer.start()
+                    canWrite = true
+                }
+            }
+        }
+
+        fun canWrite(): Boolean {
+            return canWrite
+        }
     }
+}
+
+fun mute(): Boolean {
+    return false
 }

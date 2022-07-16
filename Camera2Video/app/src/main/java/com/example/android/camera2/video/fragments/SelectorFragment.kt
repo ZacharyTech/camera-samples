@@ -71,7 +71,9 @@ class SelectorFragment : Fragment() {
                     val navController =
                         Navigation.findNavController(requireActivity(), R.id.fragment_container)
 
-                    if (android.os.Build.VERSION.SDK_INT >= 29) {
+                    if (item.audio) {
+                        navController.navigate(SelectorFragmentDirections.actionSelectorToAudio())
+                    } else if (android.os.Build.VERSION.SDK_INT >= 29) {
                         navController.navigate(
                             SelectorFragmentDirections.actionSelectorToRecordMode(
                             item.cameraId, item.size.width, item.size.height, item.fps,
@@ -93,7 +95,8 @@ class SelectorFragment : Fragment() {
                 val name: String,
                 val cameraId: String,
                 val size: Size,
-                val fps: Int)
+                val fps: Int,
+                val audio: Boolean = false)
 
         /** Converts a lens orientation enum into a human-readable string */
         private fun lensOrientationString(value: Int) = when (value) {
@@ -143,14 +146,16 @@ class SelectorFragment : Fragment() {
                                 size
                             ) / 1_000_000_000.0
                             // Compute the frames per second to let user select a configuration
-                            val fps = if (secondsPerFrame > 0) (1.0 / secondsPerFrame).toInt() else 0
-                            // val fps = 30
+                            // val fps = if (secondsPerFrame > 0) (1.0 / secondsPerFrame).toInt() else 0
+                            val fps = 30
                             val fpsLabel = if (fps > 0) "$fps" else "N/A"
                             val label = "$orientation ($id) $size $fpsLabel FPS"
                             availableCameras.add(CameraInfo(label, id, size, fps))
                         }
                 }
             }
+            availableCameras.add(CameraInfo("Audio", "", Size(0,0), 0, true))
+
             return availableCameras
         }
 

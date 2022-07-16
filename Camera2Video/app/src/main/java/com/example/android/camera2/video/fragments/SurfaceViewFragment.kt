@@ -108,26 +108,6 @@ class SurfaceViewFragment : Fragment() {
     /** [Handler] corresponding to [cameraThread] */
     private val cameraHandler = Handler(cameraThread.looper)
 
-    /** Performs recording animation of flashing screen */
-    private val animationTask: Runnable by lazy {
-        Runnable {
-            // Flash white animation
-            fragmentBinding.overlay.foreground = Color.argb(150, 255, 255, 255).toDrawable()
-            // Wait for ANIMATION_FAST_MILLIS
-            fragmentBinding.overlay.postDelayed({
-                if (currentlyRecording) {
-                    // Remove white flash animation
-                    fragmentBinding.overlay.foreground = null
-                    // Restart animation recursively
-                    if (currentlyRecording) {
-                        fragmentBinding.overlay.postDelayed(animationTask,
-                                CameraActivity.ANIMATION_FAST_MILLIS)
-                    }
-                }
-            }, CameraActivity.ANIMATION_FAST_MILLIS)
-        }
-    }
-
     /** Captures frames from a [CameraDevice] for our video recording */
     private lateinit var session: CameraCaptureSession
 
@@ -158,7 +138,7 @@ class SurfaceViewFragment : Fragment() {
             // Add the preview and recording surface targets
             addTarget(fragmentBinding.viewFinder.holder.surface)
             addTarget(encoderSurface)
-            set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+            set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO)
             // Sets user requested FPS for all targets
             set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, Range(args.fps, args.fps))
 
@@ -286,7 +266,7 @@ class SurfaceViewFragment : Fragment() {
                                     frameNumber: Long
                                 ) {
                                     super.onCaptureStarted(session, request, timestamp, frameNumber)
-                                    Log.d(TAG, "onCaptureStarted: ")
+                                    //Log.d(TAG, "onCaptureStarted: ")
                                 }
 
                                 override fun onCaptureProgressed(
@@ -295,7 +275,7 @@ class SurfaceViewFragment : Fragment() {
                                     partialResult: CaptureResult
                                 ) {
                                     super.onCaptureProgressed(session, request, partialResult)
-                                    Log.d(TAG, "onCaptureProgressed: ")
+                                   // Log.d(TAG, "onCaptureProgressed: ")
                                 }
 
                                 override fun onCaptureFailed(
@@ -312,7 +292,7 @@ class SurfaceViewFragment : Fragment() {
                                     sequenceId: Int,
                                     frameNumber: Long
                                 ) {
-                                    Log.d(TAG, "onCaptureSequenceCompleted: ")
+                                    //Log.d(TAG, "onCaptureSequenceCompleted: ")
                                 }
 
                                 override fun onCaptureSequenceAborted(
