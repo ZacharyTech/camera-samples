@@ -19,7 +19,7 @@ package com.example.android.camera2.video
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.example.android.camera2.video.databinding.ActivityCameraBinding
+import vdo.android.databinding.ActivityCameraBinding
 
 class CameraActivity : AppCompatActivity() {
 

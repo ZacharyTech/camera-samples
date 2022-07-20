@@ -32,7 +32,8 @@ import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.android.camera.utils.GenericListAdapter
-import com.example.android.camera2.video.R
+import com.example.android.camera2.video.is1080P
+import vdo.android.R
 
 /**
  * In this [Fragment] we let users pick a camera, size and FPS to use for high
@@ -96,7 +97,9 @@ class SelectorFragment : Fragment() {
             //  constrained high speed video recording, but some cameras may be capable of doing
             //  unconstrained video recording with high enough FPS for some use cases and they will
             //  not necessarily declare constrained high speed video capability.
-            cameraManager.cameraIdList.forEach { id ->
+            cameraManager.cameraIdList
+                .filter { id -> id == "0" }
+                .forEach { id ->
                 val characteristics = cameraManager.getCameraCharacteristics(id)
                 val orientation = lensOrientationString(
                         characteristics.get(CameraCharacteristics.LENS_FACING)!!)
@@ -115,7 +118,9 @@ class SelectorFragment : Fragment() {
                     val targetClass = MediaRecorder::class.java
 
                     // For each size, list the expected FPS
-                    cameraConfig.getOutputSizes(targetClass).forEach { size ->
+                    cameraConfig.getOutputSizes(targetClass)
+                        //.filter { size -> size.is1080P() }
+                        .forEach { size ->
                         // Get the number of seconds that each frame will take to process
                         val secondsPerFrame =
                                 cameraConfig.getOutputMinFrameDuration(targetClass, size) /

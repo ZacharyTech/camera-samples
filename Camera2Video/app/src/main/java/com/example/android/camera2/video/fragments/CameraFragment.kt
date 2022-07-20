@@ -30,6 +30,7 @@ import android.media.MediaCodec
 import android.media.MediaRecorder
 import android.media.MediaScannerConnection
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
@@ -51,14 +52,13 @@ import androidx.navigation.Navigation
 import androidx.navigation.fragment.navArgs
 import com.example.android.camera.utils.OrientationLiveData
 import com.example.android.camera.utils.getPreviewOutputSize
-import com.example.android.camera2.video.BuildConfig
 import com.example.android.camera2.video.CameraActivity
-import com.example.android.camera2.video.R
-import com.example.android.camera2.video.databinding.FragmentCameraBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import vdo.android.BuildConfig
+import vdo.android.R
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -67,6 +67,7 @@ import kotlin.RuntimeException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import vdo.android.databinding.FragmentCameraBinding
 
 class CameraFragment : Fragment() {
 
@@ -125,21 +126,6 @@ class CameraFragment : Fragment() {
 
     /** [Handler] corresponding to [cameraThread] */
     private val cameraHandler = Handler(cameraThread.looper)
-
-    /** Performs recording animation of flashing screen */
-    private val animationTask: Runnable by lazy {
-        Runnable {
-            // Flash white animation
-            fragmentCameraBinding.overlay.foreground = Color.argb(150, 255, 255, 255).toDrawable()
-            // Wait for ANIMATION_FAST_MILLIS
-            fragmentCameraBinding.overlay.postDelayed({
-                // Remove white flash animation
-                fragmentCameraBinding.overlay.foreground = null
-                // Restart animation recursively
-                fragmentCameraBinding.overlay.postDelayed(animationTask, CameraActivity.ANIMATION_FAST_MILLIS)
-            }, CameraActivity.ANIMATION_FAST_MILLIS)
-        }
-    }
 
     /** Captures frames from a [CameraDevice] for our video recording */
     private lateinit var session: CameraCaptureSession
@@ -253,10 +239,10 @@ class CameraFragment : Fragment() {
         session.setRepeatingRequest(previewRequest, null, cameraHandler)
 
         // React to user touching the capture button
-        fragmentCameraBinding.captureButton.setOnTouchListener { view, event ->
-            when (event.action) {
+        fragmentCameraBinding.captureButton.setOnClickListener { view ->
+            when (view.isSelected) {
 
-                MotionEvent.ACTION_DOWN -> lifecycleScope.launch(Dispatchers.IO) {
+               false -> lifecycleScope.launch(Dispatchers.IO) {
 
                     // Prevents screen rotation during the video recording
                     requireActivity().requestedOrientation =
@@ -277,10 +263,10 @@ class CameraFragment : Fragment() {
                     Log.d(TAG, "Recording started")
 
                     // Starts recording animation
-                    fragmentCameraBinding.overlay.post(animationTask)
+                   view.isSelected = true
                 }
 
-                MotionEvent.ACTION_UP -> lifecycleScope.launch(Dispatchers.IO) {
+                true -> lifecycleScope.launch(Dispatchers.IO) {
 
                     // Unlocks screen rotation after recording finished
                     requireActivity().requestedOrientation =
@@ -296,7 +282,7 @@ class CameraFragment : Fragment() {
                     recorder.stop()
 
                     // Removes recording animation
-                    fragmentCameraBinding.overlay.removeCallbacks(animationTask)
+                    view.isSelected = false
 
                     // Broadcasts the media file to the rest of the system
                     MediaScannerConnection.scanFile(
@@ -306,7 +292,7 @@ class CameraFragment : Fragment() {
                     startActivity(Intent().apply {
                         action = Intent.ACTION_VIEW
                         type = MimeTypeMap.getSingleton()
-                                .getMimeTypeFromExtension(outputFile.extension)
+                            .getMimeTypeFromExtension(outputFile.extension)
                         val authority = "${BuildConfig.APPLICATION_ID}.provider"
                         data = FileProvider.getUriForFile(view.context, authority, outputFile)
                         flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
@@ -318,8 +304,6 @@ class CameraFragment : Fragment() {
                     navController.popBackStack()
                 }
             }
-
-            true
         }
     }
 
@@ -407,8 +391,14 @@ class CameraFragment : Fragment() {
 
         /** Creates a [File] named with the current date and time */
         private fun createFile(context: Context, extension: String): File {
+            // val root = context.filesDir
+            val root = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)
+            val atest = File(root, "1vdo")
+            if (!atest.isDirectory) {
+                atest.mkdirs()
+            }
             val sdf = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss_SSS", Locale.US)
-            return File(context.filesDir, "VID_${sdf.format(Date())}.$extension")
+            return File(atest, "VID_${sdf.format(Date())}.$extension")
         }
     }
 }
