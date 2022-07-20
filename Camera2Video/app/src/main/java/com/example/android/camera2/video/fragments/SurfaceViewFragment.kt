@@ -257,69 +257,39 @@ class SurfaceViewFragment : Fragment() {
 
                     // Start recording repeating requests, which will stop the ongoing preview
                     //  repeating requests without having to explicitly call `session.stopRepeating`
-                    session.setRepeatingRequest(recordRequest,
-                            object : CameraCaptureSession.CaptureCallback() {
-                                override fun onCaptureStarted(
-                                    session: CameraCaptureSession,
-                                    request: CaptureRequest,
-                                    timestamp: Long,
-                                    frameNumber: Long
-                                ) {
-                                    super.onCaptureStarted(session, request, timestamp, frameNumber)
-                                    //Log.d(TAG, "onCaptureStarted: ")
-                                }
+                    session.setRepeatingRequest(
+                        recordRequest,
+                        object : CameraCaptureSession.CaptureCallback() {
 
-                                override fun onCaptureProgressed(
-                                    session: CameraCaptureSession,
-                                    request: CaptureRequest,
-                                    partialResult: CaptureResult
-                                ) {
-                                    super.onCaptureProgressed(session, request, partialResult)
-                                   // Log.d(TAG, "onCaptureProgressed: ")
-                                }
-
-                                override fun onCaptureFailed(
-                                    session: CameraCaptureSession,
-                                    request: CaptureRequest,
-                                    failure: CaptureFailure
-                                ) {
-                                    super.onCaptureFailed(session, request, failure)
-                                    Log.d(TAG, "onCaptureFailed: ")
-                                }
-
-                                override fun onCaptureSequenceCompleted(
-                                    session: CameraCaptureSession,
-                                    sequenceId: Int,
-                                    frameNumber: Long
-                                ) {
-                                    //Log.d(TAG, "onCaptureSequenceCompleted: ")
-                                }
-
-                                override fun onCaptureSequenceAborted(
-                                    session: CameraCaptureSession,
-                                    sequenceId: Int
-                                ) {
-                                    Log.d(TAG, "onCaptureSequenceAborted: ")
-                                }
-
-                                override fun onCaptureBufferLost(
-                                    session: CameraCaptureSession,
-                                    request: CaptureRequest,
-                                    target: Surface,
-                                    frameNumber: Long
-                                ) {
-                                    Log.e(TAG, "onCaptureBufferLost: ")
-                                }
-
-                                override fun onCaptureCompleted(session: CameraCaptureSession,
-                                                                request: CaptureRequest,
-                                                                result: TotalCaptureResult) {
-                                    Log.d(TAG, "onCaptureCompleted: ")
-                            if (currentlyRecording) {
-                                encoder.frameAvailable()
+                            override fun onCaptureProgressed(
+                                session: CameraCaptureSession,
+                                request: CaptureRequest,
+                                partialResult: CaptureResult
+                            ) {
+                                super.onCaptureProgressed(session, request, partialResult)
+                                Log.d(TAG, "onCaptureProgressed: ")
                             }
-                        }
-                    }, cameraHandler)
+
+                            override fun onCaptureBufferLost(
+                                session: CameraCaptureSession,
+                                request: CaptureRequest,
+                                target: Surface,
+                                frameNumber: Long
+                            ) {
+                                Log.e(TAG, "onCaptureBufferLost: ")
+                            }
+
+                            override fun onCaptureCompleted(
+                                session: CameraCaptureSession,
+                                request: CaptureRequest,
+                                result: TotalCaptureResult
+                            ) {
+                                if (currentlyRecording) {
+                                    encoder.frameAvailable()
+                                }
+                            }
+                        }, cameraHandler
+                    )
 
                     recordingStartMillis = System.currentTimeMillis()
                     Log.d(TAG, "Recording started")

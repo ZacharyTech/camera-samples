@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright 2022 The Android Open Source Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,8 +28,17 @@
         android:layout_width="96dp"
         android:layout_height="96dp"
         android:layout_gravity="bottom|center"
-        android:scaleType="fitCenter"
         android:background="@drawable/ic_shutter"
-        android:contentDescription="@string/capture" />
+        android:contentDescription="@string/capture"
+        android:scaleType="fitCenter" />
+
+
+    <TextView
+        android:id="@+id/record_duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textColor="@android:color/white"
+        android:textSize="18sp" />
 
 </FrameLayout>

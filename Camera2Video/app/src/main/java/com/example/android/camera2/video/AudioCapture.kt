@@ -123,7 +123,8 @@ class AudioCapture(
 
     private fun createAudioEncoder(): MediaCodec? {
         val mimeType = MediaFormat.MIMETYPE_AUDIO_AAC
-        return MediaCodecs.selectEncoder(mimeType)
+        //return MediaCodecs.selectEncoder(mimeType)
+       return MediaCodec.createEncoderByType(mimeType)
     }
 
 

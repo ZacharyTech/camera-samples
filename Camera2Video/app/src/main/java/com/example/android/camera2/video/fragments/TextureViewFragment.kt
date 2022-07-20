@@ -45,6 +45,7 @@ import vdo.android.BuildConfig
 import vdo.android.R
 import vdo.android.databinding.FragmentTextureViewBinding
 import java.io.File
+import java.lang.Runnable
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.IntBuffer
@@ -481,7 +482,22 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
 
         // Sends the capture request as frequently as possible until the session is torn down or
         //  session.stopRepeating() is called
-        session.setRepeatingRequest(captureRequest, null, cameraHandler)
+        session.setRepeatingRequest(
+            captureRequest,
+            object : CameraCaptureSession.CaptureCallback() {
+                var count: Long = 0
+                override fun onCaptureBufferLost(
+                    session: CameraCaptureSession,
+                    request: CaptureRequest,
+                    target: Surface,
+                    frameNumber: Long
+                ) {
+                    count++
+                    Log.d(TAG, "onCaptureBufferLost: ${count}")
+                }
+            },
+            cameraHandler
+        )
 
         // React to user touching the capture button
         fragmentBinding.captureButton.setOnClickListener{ view ->
@@ -501,6 +517,7 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
 
                     // Finalizes encoder setup and starts recording
                     encoder.start()
+                    startRecordTime()
 
                     currentlyRecording = true
 
@@ -519,6 +536,7 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
                     encoder.waitForFirstFrame()
 
                     session.stopRepeating()
+                    stopRecordTime()
 
                     cameraTexture.setOnFrameAvailableListener(null)
                     fragmentBinding.viewFinder.setSurfaceTextureListener(null)
@@ -772,7 +790,7 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
         /** The camera API does not update the tex image. Do so here. */
         cameraTexture.updateTexImage()
 
-        fragmentBinding.viewFinder.post({
+        fragmentBinding.viewFinder.post{
             /** Copy from the camera texture to the render texture */
             if (eglRenderSurface != null) {
                 copyCameraToRender()
@@ -787,8 +805,27 @@ class TextureViewFragment : Fragment(), SurfaceTexture.OnFrameAvailableListener 
             if (eglEncoderSurface != null && currentlyRecording) {
                 copyRenderToEncode()
             }
-        })
+        }
     }
+
+    private val timer:Timer by lazy { Timer() }
+
+    private fun startRecordTime() {
+        timer.schedule(object : TimerTask() {
+            var time = 0
+            override fun run() {
+                time += 1
+                requireActivity().runOnUiThread{
+                    fragmentBinding.recordDuration!!.text = "%02d".format( time)
+                }
+            }
+        }, 1000, 1000)
+    }
+
+    private fun stopRecordTime() {
+        timer.cancel();
+    }
+
 
     companion object {
         private val TAG = TextureViewFragment::class.java.simpleName

@@ -23,13 +23,13 @@ import android.media.MediaMuxer
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.os.SystemClock
 import android.util.Log
 import android.view.Surface
-
 import java.io.File
-import java.io.IOException
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
+import kotlin.math.roundToLong
 
 /**
  * Encodes video by streaming to disk.
@@ -191,6 +191,11 @@ class EncoderWrapper(width: Int,
         @Volatile
         var mReady: Boolean = false
 
+        @Volatile
+        var audioPrevOutputPTSUs:Long = 0
+        @Volatile
+        var videoPrevPOutputPTSUs:Long = 0
+
         /**
          * Thread entry point.
          * <p>
@@ -261,7 +266,7 @@ class EncoderWrapper(width: Int,
          * Drains all pending output from the encoder, and adds it to the circular buffer.
          */
         public fun drainEncoder() {
-            val TIMEOUT_USEC: Long = 0     // no timeout -- check for buffers, bail if none
+            val TIMEOUT_USEC: Long = 10000     // no timeout -- check for buffers, bail if none
 
             while (true) {
                 var encoderStatus: Int = mEncoder.dequeueOutputBuffer(mBufferInfo, TIMEOUT_USEC)
@@ -277,8 +282,7 @@ class EncoderWrapper(width: Int,
                     mEncodedFormat = mEncoder.getOutputFormat()
                     Log.d(TAG, "encoder output format changed: " + mEncodedFormat)
                 } else if (encoderStatus < 0) {
-                    Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: " +
-                            encoderStatus)
+                    Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: " + encoderStatus)
                     // let's ignore it
                 } else {
                     var encodedData: ByteBuffer? = mEncoder.getOutputBuffer(encoderStatus)
@@ -310,7 +314,10 @@ class EncoderWrapper(width: Int,
                         if (canWrite()) {
                             // mEncBuffer.add(encodedData, mBufferInfo.flags,
                             //         mBufferInfo.presentationTimeUs)
+                            // Log.d(TAG, "drainEncoder: ${mBufferInfo.presentationTimeUs}")
+                             //mBufferInfo.presentationTimeUs = videoPresentationTimeUs()
                             mMuxer.writeSampleData(mVideoTrack, encodedData, mBufferInfo)
+                            videoPrevPOutputPTSUs = mBufferInfo.presentationTimeUs
                         }
 
                         if (VERBOSE) {
@@ -327,6 +334,26 @@ class EncoderWrapper(width: Int,
                     }
                 }
             }
+        }
+
+        /** 视频时间戳 */
+        private fun videoPresentationTimeUs(): Long {
+            var result = SystemClock.elapsedRealtimeNanos() / 1000L
+            // presentationTimeUs should be monotonic
+            // otherwise muxer fail to write
+            if (result < videoPrevPOutputPTSUs)
+                result = videoPrevPOutputPTSUs - result + result
+            return result
+        }
+
+        /** 音频时间戳 */
+        private fun audioPresentationTimeUs(): Long {
+            var result = SystemClock.elapsedRealtimeNanos() / 1000L
+            // presentationTimeUs should be monotonic
+            // otherwise muxer fail to write
+            if (result < audioPrevOutputPTSUs)
+                result = audioPrevOutputPTSUs - result + result
+            return result
         }
 
         /**
@@ -400,9 +427,12 @@ class EncoderWrapper(width: Int,
 
         override fun onOutputBufferAvailable(buffer: ByteBuffer, info: MediaCodec.BufferInfo) {
             if (canWrite()) {
+                // info.presentationTimeUs = audioPresentationTimeUs()
                 mMuxer.writeSampleData(mAudioTrack, buffer, info)
+                audioPrevOutputPTSUs = info.presentationTimeUs
             }
         }
+
 
         override fun onError(e: MediaCodec.CodecException) {
             mAudioTrack = -1
@@ -429,10 +459,9 @@ class EncoderWrapper(width: Int,
 
         fun canWrite(): Boolean {
             return canWrite
-        }
-    }
+        } }
 }
 
 fun mute(): Boolean {
-    return false
+    return true
 }

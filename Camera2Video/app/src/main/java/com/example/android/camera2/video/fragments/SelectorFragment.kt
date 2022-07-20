@@ -20,7 +20,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata
 import android.media.MediaRecorder
 import android.os.Bundle
 import android.util.Log
@@ -34,7 +33,6 @@ import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.android.camera.utils.GenericListAdapter
-import com.example.android.camera2.video.C
 import com.example.android.camera2.video.C.TAG
 import vdo.android.R
 
@@ -163,11 +161,11 @@ class SelectorFragment : Fragment() {
         private fun enumerateVideoFps(cameraManager: CameraManager) {
             cameraManager.cameraIdList.forEach { id ->
                 val characteristics = cameraManager.getCameraCharacteristics(id)
-                val fpsRange = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
-                Log.d(C.TAG, "enumerateVideoFps: ${fpsRange.contentToString()}")
+                val fpsRange =
+                    characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+                Log.d(TAG, "enumerateVideoFps: ${fpsRange.contentToString()}")
             }
         }
-
     }
 }
 
